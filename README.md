@@ -32,7 +32,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/<your-username>/yang-yongxing-strategy.git
+git clone https://github.com/chenhe81/yang-yongxing-strategy.git
 cd yang-yongxing-strategy/scripts
 
 # 2. 安装环境
