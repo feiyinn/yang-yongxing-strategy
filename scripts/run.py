@@ -44,6 +44,73 @@ def cmd_scan(args):
             print(f"   {c['code']} {c['name']} 现价{c['price']}")
 
 
+def cmd_sepa_scan(args):
+    """执行SEPA策略选股扫描"""
+    from sepa_filter import SEPAFilter
+    from report import generate_sepa_report
+
+    skip_ma = "--skip-ma" in args or "-s" in args
+
+    logger.info("🚀 开始米勒维尼SEPA策略选股扫描...")
+    sepa = SEPAFilter()
+    result = sepa.scan(skip_ma_check=skip_ma)
+
+    report_text, filepath = generate_sepa_report(result)
+    print(report_text)
+    print(f"\n📁 报告已保存至: {filepath}")
+
+    candidates = result.get("candidates", [])
+    if candidates:
+        print(f"\n💡 这些股票满足SEPA基本面筛选，可重点关注：")
+        for c in candidates[:15]:
+            rev_g = f"{c['revenue_growth_yoy']:.1f}%" if c.get("revenue_growth_yoy") else "N/A"
+            profit_g = f"{c['profit_growth_yoy']:.1f}%" if c.get("profit_growth_yoy") else "N/A"
+            roe = f"{c['roe']:.1f}%" if c.get("roe") else "N/A"
+            print(f"   {c['code']} {c['name']} 营收增长:{rev_g} 净利增长:{profit_g} ROE:{roe}")
+
+
+def cmd_combined_scan(args):
+    """执行SEPA+杨永兴联合选股扫描"""
+    from combined_scanner import CombinedScanner
+    from report import generate_combined_report
+
+    skip_ma = "--skip-ma" in args
+    skip_intraday = "--skip-intraday" in args or "-s" in args
+    relax = "--relax" in args or "-r" in args
+
+    logger.info("🚀 开始SEPA+杨永兴联合选股扫描...")
+    scanner = CombinedScanner()
+    result = scanner.scan(
+        skip_intraday=skip_intraday,
+        skip_ma_check=skip_ma,
+        relax_yang=relax,
+    )
+
+    report_text, filepath = generate_combined_report(result)
+    print(report_text)
+    print(f"\n📁 报告已保存至: {filepath}")
+
+    final = result.get("final_candidates", [])
+    sepa = result.get("sepa_candidates", [])
+
+    if final:
+        print(f"\n🌟 以下股票同时满足SEPA基本面+杨永兴技术面，最高确定性：")
+        for c in final[:10]:
+            rev_g = f"{c['revenue_growth_yoy']:.1f}%" if c.get("revenue_growth_yoy") else "N/A"
+            profit_g = f"{c['profit_growth_yoy']:.1f}%" if c.get("profit_growth_yoy") else "N/A"
+            roe = f"{c['roe']:.1f}%" if c.get("roe") else "N/A"
+            print(f"   {c['code']} {c['name']} 现价{c['price']} 涨幅{c.get('change_pct',0):.1f}%")
+            print(f"     基本面: 营收+{rev_g} 净利+{profit_g} ROE:{roe}")
+            print(f"     技术面: 量比{c.get('volume_ratio','N/A')} 换手{c.get('turnover_rate','N/A')}% 市值{c.get('circ_mv_billion','N/A')}亿")
+    elif sepa:
+        print(f"\n💡 今日无股票同时满足双战法条件，但以下SEPA候选股基本面优秀，可关注回调买点：")
+        for c in sepa[:10]:
+            rev_g = f"{c['revenue_growth_yoy']:.1f}%" if c.get("revenue_growth_yoy") else "N/A"
+            profit_g = f"{c['profit_growth_yoy']:.1f}%" if c.get("profit_growth_yoy") else "N/A"
+            roe = f"{c['roe']:.1f}%" if c.get("roe") else "N/A"
+            print(f"   📌 {c['code']} {c['name']} 现价{c.get('price','N/A')} 营收+{rev_g} 净利+{profit_g} ROE:{roe}")
+
+
 def cmd_sell_check(args):
     """执行卖出信号检查"""
     from sell_checker import check_sell_signals
@@ -132,7 +199,9 @@ def cmd_clear(args):
 
 
 COMMANDS = {
-    "scan": ("选股扫描", cmd_scan),
+    "scan": ("杨永兴九步选股扫描", cmd_scan),
+    "sepa-scan": ("SEPA策略选股扫描（米勒维尼）", cmd_sepa_scan),
+    "combined-scan": ("SEPA+杨永兴联合扫描（双战法）", cmd_combined_scan),
     "sell-check": ("卖出信号检查", cmd_sell_check),
     "portfolio": ("查看持仓", cmd_portfolio),
     "add": ("添加持仓 (add 代码 名称 买入价)", cmd_add),
@@ -152,6 +221,7 @@ def print_help():
         print(f"  {cmd:<16} {desc}")
     print("\n选项：")
     print("  -s, --skip-intraday  跳过分时数据检查（加快扫描速度）")
+    print("  -r, --relax          放宽杨永兴条件（涨幅不限、市值/换手率放宽）")
 
 
 if __name__ == "__main__":

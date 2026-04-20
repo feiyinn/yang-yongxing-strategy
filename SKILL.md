@@ -1,13 +1,13 @@
 ---
 name: yang-yongxing-strategy
-description: 杨永兴短线战法A股尾盘选股辅助工具。This skill should be used when the user asks about 杨永兴战法, 尾盘选股, 隔夜套利, T+1套利, 短线选股扫描, or needs to scan/filter A-share stocks based on Yang Yongxing's rules. Also triggers when the user wants stock analysis for next-day trading, sell signal checks, or portfolio tracking based on this specific short-term strategy.
+description: 杨永兴短线战法 + SEPA策略 A股选股辅助工具。This skill should be used when the user asks about 杨永兴战法, 尾盘选股, 隔夜套利, T+1套利, 短线选股扫描, SEPA, 米勒维尼, 基本面筛选, or needs to scan/filter A-share stocks based on Yang Yongxing's rules or SEPA strategy. Also triggers when the user wants stock analysis for next-day trading, sell signal checks, combined scanning, or portfolio tracking.
 ---
 
 # 杨永兴短线战法
 
 ## Overview
 
-基于游资大佬杨永兴"隔夜套利法"的A股短线选股辅助系统。核心逻辑：**尾盘14:30买入，次日早盘10:30前卖出**，通过九步过滤法筛选高确定性标的，把T+1制度玩出T+0效果。提供选股扫描、卖出信号检查、持仓跟踪三大功能。
+基于游资大佬杨永兴"隔夜套利法" + 马克·米勒维尼《股票魔法师》SEPA策略的A股选股辅助系统。核心逻辑：**先用SEPA筛选基本面优质标的，再用杨永兴九步法寻找短线买点**。提供联合扫描、单独扫描、卖出信号检查、持仓跟踪四大功能。
 
 ## 首次使用 - 环境安装
 
@@ -37,13 +37,16 @@ python3 -m venv venv
 
 ```
 用户触发场景
-├── "扫描/选股/筛选股票" → 执行选股扫描流程
+├── "扫描/选股/筛选股票" → 执行SEPA+杨永兴联合扫描流程（推荐）
+├── "联合扫描/双筛选/综合" → 执行SEPA+杨永兴联合扫描流程
+├── "短线/尾盘/杨永兴" → 执行杨永兴九步选股扫描流程
+├── "SEPA/趋势/米勒维尼/基本面" → 执行SEPA策略选股扫描流程
 ├── "卖出/卖出信号/该不该卖" → 执行卖出检查流程
 ├── "持仓/我的股票" → 查看持仓
 ├── "添加持仓/买入记录" → 记录持仓
 ├── "删除持仓/已卖出" → 移除持仓
 ├── "大盘/市场环境" → 分析大盘趋势
-└── "战法/规则/杨永兴" → 讲解战法知识
+└── "战法/规则/杨永兴/SEPA" → 讲解战法知识
 ```
 
 ## 核心交易规则
@@ -107,6 +110,94 @@ cd "$HOME/.codebuddy/skills/yang-yongxing-strategy/scripts"
 | 7 | 振幅 | ≤8% | 波动适中 |
 | 8 | K线形态 | 上方无压力，无长上影线 | 上涨阻力小 |
 | 9 | 分时走势 | 全天站均价线上方 | 买方主导，主力护盘 |
+
+## SEPA策略选股扫描流程
+
+### 前置条件
+- 确认项目环境已就绪（akshare已安装）
+- SEPA扫描主要使用财务数据，非交易时段也可运行
+
+### 执行步骤
+
+1. 运行SEPA策略选股扫描：
+```bash
+cd "$HOME/.codebuddy/skills/yang-yongxing-strategy/scripts"
+./venv/bin/python run.py sepa-scan
+```
+
+跳过均线和量能检查（加快扫描速度，仅筛选基本面）：
+```bash
+./venv/bin/python run.py sepa-scan --skip-ma
+```
+
+2. 解读扫描结果：
+   - 七步过滤过程的淘汰情况
+   - 关注财务指标：营收增长、净利增长、ROE、3年CAGR
+   - 技术指标：50日/150日均线、10日/120日均量
+
+3. 结合杨永兴战法双重筛选：
+   - SEPA候选股 + 杨永兴九步过滤 = 最高确定性标的
+   - 先跑 `sepa-scan`，再用候选股代码跑 `scan`
+
+### SEPA七步筛选法详解
+
+| 步骤 | 维度 | 标准 | 逻辑 |
+|------|------|------|------|
+| 1 | 排除ST/次新股 | 上市>1年 | 减少风险，需历史验证 |
+| 2 | 营收增长 | 同比>25% | 超级增长门槛 |
+| 3 | 净利润增长 | 同比>30%，环比为正 | 利润加速释放 |
+| 4 | 趋势确认 | 股价>MA50&MA150 | 中长期上升趋势 |
+| 5 | 量能确认 | 10日均量>120日均量 | 机构资金入场 |
+| 6 | ROE | >15% | 盈利效率高 |
+| 7 | 3年CAGR | 净利润>20% | 业绩持续性强 |
+
+### VCP形态（波动率收缩形态）
+
+SEPA策略的核心买入信号：
+- **特征**：价格波动从左到右逐渐收窄，成交量同步萎缩
+- **买点**：价格从最后一个收缩区向上突破时
+- **止损**：突破失败，价格回落到收缩区下沿
+- **结合杨永兴**：在VCP突破当天尾盘确认买入
+
+## SEPA+杨永兴联合扫描流程（推荐）
+
+### 策略逻辑
+
+先SEPA筛选基本面优质标的，再杨永兴寻找短线技术面买点，双重验证提高确定性：
+- **SEPA通过** → 基本面优秀，业绩增长强劲，中长期上升趋势
+- **杨永兴通过** → 短线技术面到位，资金活跃，买点确认
+- **双战法同时通过** → 最高确定性标的
+
+### 执行步骤
+
+1. 运行联合扫描（推荐，双战法一体化）：
+```bash
+cd "$HOME/.codebuddy/skills/yang-yongxing-strategy/scripts"
+./venv/bin/python run.py combined-scan
+```
+
+2. 快速模式（跳过均线检查+分时数据，最快）：
+```bash
+./venv/bin/python run.py combined-scan --skip-ma --skip-intraday
+```
+
+3. 放宽模式（杨永兴条件放宽，更多候选）：
+```bash
+./venv/bin/python run.py combined-scan --relax
+```
+
+4. 解读结果：
+   - **🌟 双战法通过**：同时满足SEPA+杨永兴，最高确定性，尾盘择机买入
+   - **✅ SEPA通过但杨永兴未通过**：基本面优秀但短线买点未到，加入自选等回调
+   - **❌ 两者均未通过**：当日无机会，耐心等待
+
+### 联合扫描参数说明
+
+| 参数 | 作用 | 说明 |
+|------|------|------|
+| `--skip-ma` | 跳过均线检查 | SEPA步骤4/5跳过，仅做基本面筛选 |
+| `-s, --skip-intraday` | 跳过分时数据 | 杨永兴步骤8跳过，加快速度 |
+| `-r, --relax` | 放宽杨永兴条件 | 涨幅不限、市值30-500亿、换手2-15% |
 
 ## 卖出信号检查流程
 
@@ -197,4 +288,6 @@ print(json.dumps({**trend, **status}, ensure_ascii=False, default=str, indent=2)
 - ⚠️ **免责声明**：本工具仅供学习研究，不构成任何投资建议。股市有风险，投资需谨慎。
 - 战法依赖盘中数据，非交易日运行可能获取不到实时行情
 - 分时数据获取较慢，如候选股不多可用完整扫描；候选股多时建议 `--skip-intraday` 先快速筛选
+- SEPA策略的财务数据获取较慢（需逐只查询），建议先用 `--skip-ma` 仅做基本面筛选
 - 量化时代很多超短线已被程序化交易取代，战法有效性需持续验证
+- SEPA策略数据来源参考社区Skill：china-stock-analysis (sugarforever/01coder-agent-skills)

@@ -44,6 +44,31 @@ STOP_LOSS = 3.0
 # 止损线2（亏损%强制）
 FORCE_STOP_LOSS = 5.0
 
+# ============ SEPA策略参数（米勒维尼《股票魔法师》） ============
+
+# 最近季度营收同比增长率最低要求（%）
+SEPA_REVENUE_GROWTH_MIN = 25.0
+
+# 最近季度净利润同比增长率最低要求（%）
+SEPA_PROFIT_GROWTH_MIN = 30.0
+
+# ROE最低要求（%）
+SEPA_ROE_MIN = 15.0
+
+# 近3年净利润复合增长率最低要求（%）
+SEPA_PROFIT_CAGR_MIN = 20.0
+
+# 上市最少天数（排除次新股）
+SEPA_LISTING_MIN_DAYS = 365
+
+# 均线参数
+SEPA_MA_SHORT = 50    # 短期均线（日）
+SEPA_MA_LONG = 150    # 长期均线（日）
+
+# 量能参数
+SEPA_VOL_SHORT = 10   # 短期均量（日）
+SEPA_VOL_LONG = 120   # 长期均量（日）
+
 # ============ 仓位管理参数 ============
 
 # 单票最大仓位占比

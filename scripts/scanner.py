@@ -138,8 +138,13 @@ class Scanner:
         # ============ 步骤4：量比 ≥ 1 ============
         logger.info("===== 步骤4：量比筛选 =====")
         before = len(stocks)
-        stocks = stocks[stocks["volume_ratio"] >= VOLUME_RATIO_MIN].copy()
-        self.log_filter(4, f"量比≥{VOLUME_RATIO_MIN}", before, len(stocks))
+        if "volume_ratio" in stocks.columns and stocks["volume_ratio"].notna().any():
+            # 有量比数据时正常过滤，NaN的保留
+            mask = (stocks["volume_ratio"] >= VOLUME_RATIO_MIN) | stocks["volume_ratio"].isna()
+            stocks = stocks[mask].copy()
+            self.log_filter(4, f"量比≥{VOLUME_RATIO_MIN}（含NaN保留）", before, len(stocks))
+        else:
+            self.log_filter(4, "量比数据缺失，跳过", before, len(stocks))
         logger.info(f"剩余 {len(stocks)} 只")
 
         if stocks.empty:
@@ -148,11 +153,12 @@ class Scanner:
         # ============ 步骤5：流通市值 50-200亿 ============
         logger.info("===== 步骤5：流通市值筛选 =====")
         before = len(stocks)
-        if "circ_mv_billion" in stocks.columns:
-            stocks = stocks[
+        if "circ_mv_billion" in stocks.columns and stocks["circ_mv_billion"].notna().any():
+            mask = (
                 (stocks["circ_mv_billion"] >= MARKET_CAP_MIN) &
                 (stocks["circ_mv_billion"] <= MARKET_CAP_MAX)
-            ].copy()
+            ) | stocks["circ_mv_billion"].isna()
+            stocks = stocks[mask].copy()
         self.log_filter(5, f"流通市值{MARKET_CAP_MIN}-{MARKET_CAP_MAX}亿", before, len(stocks))
         logger.info(f"剩余 {len(stocks)} 只")
 
@@ -162,11 +168,15 @@ class Scanner:
         # ============ 步骤6：换手率 5%-10% ============
         logger.info("===== 步骤6：换手率筛选 =====")
         before = len(stocks)
-        stocks = stocks[
-            (stocks["turnover_rate"] >= TURNOVER_MIN) &
-            (stocks["turnover_rate"] <= TURNOVER_MAX)
-        ].copy()
-        self.log_filter(6, f"换手率{TURNOVER_MIN}-{TURNOVER_MAX}%", before, len(stocks))
+        if "turnover_rate" in stocks.columns and stocks["turnover_rate"].notna().any():
+            mask = (
+                (stocks["turnover_rate"] >= TURNOVER_MIN) &
+                (stocks["turnover_rate"] <= TURNOVER_MAX)
+            ) | stocks["turnover_rate"].isna()
+            stocks = stocks[mask].copy()
+            self.log_filter(6, f"换手率{TURNOVER_MIN}-{TURNOVER_MAX}%（含NaN保留）", before, len(stocks))
+        else:
+            self.log_filter(6, "换手率数据缺失，跳过", before, len(stocks))
         logger.info(f"剩余 {len(stocks)} 只")
 
         if stocks.empty:

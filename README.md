@@ -1,16 +1,22 @@
-# 杨永兴短线战法 - A股尾盘选股辅助工具
+# 杨永兴短线战法 + SEPA策略 - A股选股辅助工具
 
 > ⚠️ **免责声明**：本工具仅供学习研究，不构成任何投资建议。股市有风险，投资需谨慎。
 
-基于游资大佬杨永兴"隔夜套利法"的 A 股短线选股辅助系统，也是一个 [CodeBuddy Skill](https://skillhub.cn)。
+基于游资大佬杨永兴"隔夜套利法" + 马克·米勒维尼《股票魔法师》SEPA策略的 A 股选股辅助系统，也是一个 [CodeBuddy Skill](https://skillhub.cn)。
 
-## 战法核心
+## 核心策略
 
-**尾盘买，早盘卖，持股不过夜，把 T+1 玩成 T+0。**
+**先SEPA筛选基本面优质标的，再杨永兴寻找短线买点，双重验证提高确定性。**
 
+### 杨永兴短线战法
 - **买入**：14:30-14:50（尾盘30分钟）
 - **卖出**：次日9:30-10:30（开盘1小时内）
 - **持股时长**：严格 ≤ 2小时交易时间
+
+### SEPA策略（米勒维尼《股票魔法师》）
+- 营收增长 >25%、净利增长 >30%、ROE >15%
+- 股价在MA50/MA150之上、量能放大
+- 3年净利润CAGR >20%
 
 ## 九步过滤法
 
@@ -56,8 +62,14 @@ python3 setup.py
 ```bash
 cd scripts
 
-# 选股扫描（14:30后使用）
+# 联合扫描（推荐：SEPA基本面+杨永兴技术面，双战法验证）
+./venv/bin/python run.py combined-scan [--skip-ma] [--skip-intraday] [--relax]
+
+# 杨永兴选股扫描（14:30后使用）
 ./venv/bin/python run.py scan [--skip-intraday]
+
+# SEPA策略选股扫描（基本面筛选）
+./venv/bin/python run.py sepa-scan [--skip-ma]
 
 # 卖出信号检查（次日9:35后使用）
 ./venv/bin/python run.py sell-check
@@ -93,11 +105,13 @@ yang-yongxing-strategy/
 └── scripts/
     ├── setup.py          # 一键安装脚本
     ├── config.py         # 参数配置
-    ├── data_fetcher.py   # akshare 数据获取层
-    ├── scanner.py        # 九步过滤筛选引擎
+    ├── data_fetcher.py   # 数据获取层（腾讯/东方财富/新浪三源）
+    ├── scanner.py        # 杨永兴九步过滤筛选引擎
+    ├── sepa_filter.py    # SEPA七步基本面筛选引擎
+    ├── combined_scanner.py # SEPA+杨永兴联合扫描引擎
     ├── sell_checker.py   # 卖出信号检查
     ├── portfolio.py      # 持仓跟踪管理
-    ├── report.py         # 报告生成
+    ├── report.py         # 报告生成（含联合扫描报告）
     ├── run.py            # CLI 入口
     └── requirements.txt  # Python 依赖
 ```
@@ -114,7 +128,8 @@ yang-yongxing-strategy/
 
 ## 技术栈
 
-- **数据源**：[akshare](https://github.com/akfamily/akshare)（基于东方财富数据，免费无需注册）
+- **数据源**：[akshare](https://github.com/akfamily/akshare) + 腾讯股票API（qt.gtimg.cn），三源自动切换
+- **策略**：杨永兴短线战法 + 米勒维尼SEPA策略
 - **语言**：Python 3.9+
 - **框架**：CodeBuddy Skill
 
