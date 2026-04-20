@@ -198,6 +198,70 @@ cd "$HOME/.codebuddy/skills/yang-yongxing-strategy/scripts"
 | `--skip-ma` | 跳过均线检查 | SEPA步骤4/5跳过，仅做基本面筛选 |
 | `-s, --skip-intraday` | 跳过分时数据 | 杨永兴步骤8跳过，加快速度 |
 | `-r, --relax` | 放宽杨永兴条件 | 涨幅不限、市值30-500亿、换手2-15% |
+| `-o, --openviking` | 启用OpenViking上下文管理 | 记忆积累+经验沉淀，需先启动openviking-server |
+
+## OpenViking 上下文管理（可选增强）
+
+### 功能说明
+
+OpenViking 为选股 Skill 提供上下文管理能力，解决"无记忆、无经验、上下文浪费"三大痛点：
+
+| 功能 | 说明 | 价值 |
+|------|------|------|
+| 自动记忆召回 | 每轮对话前自动检索相关历史 | 记住用户偏好和历史扫描 |
+| 扫描结果同步 | 扫描完成后自动存储 | 历史可追溯，趋势可对比 |
+| 用户偏好捕获 | 存储用户投资偏好 | 无需每次重复设置 |
+| 操作经验积累 | 从历史操作中积累经验 | 提升选股准确率 |
+
+### 一键初始化
+
+```bash
+cd "$HOME/.codebuddy/skills/yang-yongxing-strategy/scripts"
+./venv/bin/python run.py openviking-init
+```
+
+此命令自动完成：安装openviking → 检查Ollama → 拉取嵌入模型 → 创建配置文件
+
+### 手动启动步骤
+
+```bash
+# 1. 安装 Ollama（本地大模型运行环境）
+brew install ollama
+brew services start ollama
+
+# 2. 拉取嵌入模型
+ollama pull nomic-embed-text
+
+# 3. 安装 OpenViking
+pip install openviking
+
+# 4. 创建配置文件
+mkdir -p ~/.openviking
+# 编辑 ~/.openviking/ov.conf 配置Ollama模型
+
+# 5. 启动 OpenViking 服务
+openviking-server
+
+# 6. 导入策略知识
+./venv/bin/python openviking_init_knowledge.py
+```
+
+### 使用方式
+
+```bash
+# 启用OpenViking的联合扫描
+./venv/bin/python run.py combined-scan --openviking
+
+# 查看OpenViking状态
+./venv/bin/python run.py openviking-status
+```
+
+### 优雅降级
+
+OpenViking 是**可选增强**，不启用时所有功能正常运行。适配层设计为：
+- OpenViking 不可用 → 自动回退到本地文件存储
+- 不影响核心选股逻辑
+- 零侵入：核心扫描代码无需修改
 
 ## 卖出信号检查流程
 

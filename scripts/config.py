@@ -77,6 +77,26 @@ MAX_POSITION_RATIO = 0.20
 # 每日最大操作笔数
 MAX_TRADES_PER_DAY = 3
 
+# ============ OpenViking 上下文管理参数 ============
+
+import os
+
+# 是否启用 OpenViking 上下文管理（记忆、经验积累）
+# 设为 true 后需要先启动 openviking-server
+OPENVIKING_ENABLED = os.environ.get("OPENVIKING_ENABLED", "false").lower() == "true"
+
+# OpenViking 服务地址
+OPENVIKING_URL = os.environ.get("OPENVIKING_URL", "http://localhost:1933")
+
+# 请求超时（秒）
+OPENVIKING_TIMEOUT = int(os.environ.get("OPENVIKING_TIMEOUT", "5"))
+
+# 自动召回记忆数（每轮对话最多注入N条相关记忆）
+OPENVIKING_RECALL_LIMIT = int(os.environ.get("OPENVIKING_RECALL_LIMIT", "6"))
+
+# 本地降级存储目录（OpenViking不可用时自动使用）
+OPENVIKING_LOCAL_DIR = os.environ.get("OPENVIKING_LOCAL_DIR", "")
+
 # ============ 路径配置（自动检测） ============
 
 import os

@@ -72,14 +72,22 @@ def cmd_sepa_scan(args):
 def cmd_combined_scan(args):
     """执行SEPA+杨永兴联合选股扫描"""
     from combined_scanner import CombinedScanner
+    from openviking_adapter import init_openviking
     from report import generate_combined_report
 
     skip_ma = "--skip-ma" in args
     skip_intraday = "--skip-intraday" in args or "-s" in args
     relax = "--relax" in args or "-r" in args
+    use_openviking = "--openviking" in args or "-o" in args
+
+    # 初始化 OpenViking
+    ov = init_openviking(enabled=use_openviking)
 
     logger.info("🚀 开始SEPA+杨永兴联合选股扫描...")
-    scanner = CombinedScanner()
+    if ov.available:
+        logger.info("📋 OpenViking 上下文管理已启用")
+
+    scanner = CombinedScanner(openviking=ov)
     result = scanner.scan(
         skip_intraday=skip_intraday,
         skip_ma_check=skip_ma,
@@ -198,6 +206,120 @@ def cmd_clear(args):
     clear_portfolio()
 
 
+def cmd_openviking_status(args):
+    """查看OpenViking状态"""
+    from openviking_adapter import OpenVikingAdapter
+
+    ov = OpenVikingAdapter()
+    status = ov.get_status()
+
+    print("=" * 50)
+    print("📊 OpenViking 上下文管理状态")
+    print("=" * 50)
+    print(f"  已启用: {'✅' if status['enabled'] else '❌'}")
+    print(f"  可用:   {'✅' if status['available'] else '❌'}")
+    print(f"  地址:   {status['url']}")
+
+    if status.get("server_health"):
+        health = status["server_health"]
+        if isinstance(health, dict):
+            print(f"  健康:   ✅ {health}")
+        else:
+            print(f"  健康:   ❌ {health}")
+    else:
+        print(f"  健康:   未检测")
+
+    if not status["available"]:
+        print("\n💡 启用 OpenViking 上下文管理：")
+        print("   1. 安装: pip install openviking")
+        print("   2. 安装Ollama: brew install ollama")
+        print("   3. 拉取模型: ollama pull nomic-embed-text")
+        print("   4. 初始化: openviking-server init")
+        print("   5. 启动服务: openviking-server")
+        print("   6. 扫描时使用: python run.py combined-scan --openviking")
+
+    print("=" * 50)
+
+
+def cmd_openviking_init(args):
+    """初始化OpenViking配置"""
+    import subprocess
+
+    print("🚀 初始化 OpenViking 上下文管理系统...")
+
+    # 检查 openviking 是否安装
+    try:
+        import openviking
+        print("✅ openviking 已安装")
+    except ImportError:
+        print("❌ openviking 未安装，正在安装...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "openviking"], check=True)
+        print("✅ openviking 安装完成")
+
+    # 检查 Ollama
+    try:
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            print("✅ Ollama 已安装并运行")
+            # 检查嵌入模型
+            if "nomic-embed-text" not in result.stdout:
+                print("📥 正在拉取嵌入模型 nomic-embed-text...")
+                subprocess.run(["ollama", "pull", "nomic-embed-text"], check=True)
+                print("✅ nomic-embed-text 已就绪")
+            else:
+                print("✅ nomic-embed-text 已就绪")
+        else:
+            print("❌ Ollama 未运行，请先启动: brew services start ollama")
+            return
+    except FileNotFoundError:
+        print("❌ Ollama 未安装，请先安装: brew install ollama")
+        return
+    except Exception as e:
+        print(f"❌ Ollama 检查失败: {e}")
+        return
+
+    # 创建配置文件
+    ov_dir = os.path.expanduser("~/.openviking")
+    os.makedirs(ov_dir, exist_ok=True)
+
+    conf_path = os.path.join(ov_dir, "ov.conf")
+    if os.path.exists(conf_path):
+        print(f"⚠️ 配置文件已存在: {conf_path}")
+    else:
+        conf = {
+            "storage": {
+                "workspace": os.path.join(ov_dir, "workspace")
+            },
+            "embedding": {
+                "dense": {
+                    "api_base": "http://localhost:11434/v1",
+                    "api_key": "ollama",
+                    "provider": "openai",
+                    "dimension": 768,
+                    "model": "nomic-embed-text"
+                }
+            },
+            "vlm": {
+                "api_base": "http://localhost:11434/v1",
+                "api_key": "ollama",
+                "provider": "litellm",
+                "model": "qwen2.5:7b"
+            }
+        }
+
+        import json
+        with open(conf_path, 'w', encoding='utf-8') as f:
+            json.dump(conf, f, indent=2, ensure_ascii=False)
+        print(f"✅ 配置文件已创建: {conf_path}")
+
+    # 提示启动
+    print("\n" + "=" * 50)
+    print("🎉 初始化完成！下一步：")
+    print("   1. 启动 OpenViking 服务: openviking-server")
+    print("   2. 使用联合扫描: python run.py combined-scan --openviking")
+    print("=" * 50)
+
+
 COMMANDS = {
     "scan": ("杨永兴九步选股扫描", cmd_scan),
     "sepa-scan": ("SEPA策略选股扫描（米勒维尼）", cmd_sepa_scan),
@@ -210,6 +332,8 @@ COMMANDS = {
     "watch-add": ("添加自选 (watch-add 代码 名称)", cmd_add_watch),
     "watch-remove": ("移除自选 (watch-remove 代码)", cmd_remove_watch),
     "clear": ("清空持仓", cmd_clear),
+    "openviking-status": ("查看OpenViking上下文管理状态", cmd_openviking_status),
+    "openviking-init": ("初始化OpenViking环境（一键配置）", cmd_openviking_init),
 }
 
 
@@ -222,6 +346,7 @@ def print_help():
     print("\n选项：")
     print("  -s, --skip-intraday  跳过分时数据检查（加快扫描速度）")
     print("  -r, --relax          放宽杨永兴条件（涨幅不限、市值/换手率放宽）")
+    print("  -o, --openviking     启用OpenViking上下文管理（记忆+经验积累）")
 
 
 if __name__ == "__main__":

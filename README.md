@@ -63,13 +63,16 @@ python3 setup.py
 cd scripts
 
 # 联合扫描（推荐：SEPA基本面+杨永兴技术面，双战法验证）
-./venv/bin/python run.py combined-scan [--skip-ma] [--skip-intraday] [--relax]
+./venv/bin/python run.py combined-scan [--skip-ma] [--skip-intraday] [--relax] [--openviking]
 
 # 杨永兴选股扫描（14:30后使用）
 ./venv/bin/python run.py scan [--skip-intraday]
 
 # SEPA策略选股扫描（基本面筛选）
 ./venv/bin/python run.py sepa-scan [--skip-ma]
+
+# 启用OpenViking上下文管理（记忆+经验积累）
+./venv/bin/python run.py combined-scan --openviking
 
 # 卖出信号检查（次日9:35后使用）
 ./venv/bin/python run.py sell-check
@@ -109,6 +112,8 @@ yang-yongxing-strategy/
     ├── scanner.py        # 杨永兴九步过滤筛选引擎
     ├── sepa_filter.py    # SEPA七步基本面筛选引擎
     ├── combined_scanner.py # SEPA+杨永兴联合扫描引擎
+    ├── openviking_adapter.py # OpenViking上下文管理适配层
+    ├── openviking_init_knowledge.py # 策略知识导入脚本
     ├── sell_checker.py   # 卖出信号检查
     ├── portfolio.py      # 持仓跟踪管理
     ├── report.py         # 报告生成（含联合扫描报告）
@@ -130,6 +135,7 @@ yang-yongxing-strategy/
 
 - **数据源**：[akshare](https://github.com/akfamily/akshare) + 腾讯股票API（qt.gtimg.cn），三源自动切换
 - **策略**：杨永兴短线战法 + 米勒维尼SEPA策略
+- **上下文管理**：[OpenViking](https://github.com/volcengine/OpenViking)（可选，提供记忆和经验积累）
 - **语言**：Python 3.9+
 - **框架**：CodeBuddy Skill
 

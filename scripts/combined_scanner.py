@@ -41,17 +41,19 @@ from config import (
 from sepa_filter import SEPAFilter
 from scanner import Scanner, is_st_stock
 import data_fetcher as df_api
+from openviking_adapter import OpenVikingAdapter
 
 logger = logging.getLogger(__name__)
 
 
 class CombinedScanner:
-    """SEPA + 杨永兴 联合扫描引擎"""
+    """SEPA + 杨永兴 联合扫描引擎（集成OpenViking上下文管理）"""
 
-    def __init__(self):
+    def __init__(self, openviking: OpenVikingAdapter = None):
         self.filter_log = []
         self.sepa_filter = SEPAFilter()
         self.scanner = Scanner()
+        self.ov = openviking or OpenVikingAdapter()
 
     def log_filter(self, phase, step, action, count_before, count_after, reason=""):
         self.filter_log.append({
@@ -283,9 +285,16 @@ class CombinedScanner:
         # ============ 构建最终结果 ============
         final_candidates = self._build_candidates(yang_stocks, financial_cache)
 
-        return self._build_result(
+        result = self._build_result(
             final_candidates, sepa_candidates, market_trend, market_status
         )
+
+        # ============ OpenViking 上下文同步 ============
+        if self.ov.available:
+            self.ov.sync_scan_result(result)
+            logger.info("📋 扫描结果已同步到OpenViking上下文数据库")
+
+        return result
 
     def _filter_kline_pressure(self, stocks):
         """K线形态过滤：高位长上影线剔除"""
